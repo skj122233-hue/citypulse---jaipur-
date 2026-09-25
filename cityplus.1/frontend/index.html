@@ -1,0 +1,1227 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CityPulse Jaipur · Civic Intelligence</title>
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+*{box-sizing:border-box}
+html,body{min-height:100%;width:100%}
+:root{
+  --bg:#f5f7fb;--card:#fff;--text:#172033;--muted:#6b7689;
+  --line:#e3e8f0;--blue:#2563eb;--blue2:#eff6ff;--green:#16a34a;
+  --orange:#ea8a00;--red:#dc2626;--purple:#7c3aed;--shadow:0 8px 25px #17203312
+}
+body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+button,input{font:inherit}
+button{cursor:pointer}
+.app{min-height:100vh;display:grid;grid-template-columns:250px 1fr;grid-template-rows:70px 1fr}
+header{grid-column:1/3;display:flex;align-items:center;gap:20px;padding:12px 22px;background:#fff;border-bottom:1px solid var(--line);position:sticky;top:0;z-index:1000}
+.brand{width:225px;font-weight:800;font-size:21px;letter-spacing:-.4px;color:var(--blue)}
+.brand span{display:block;color:var(--muted);font-size:11px;font-weight:500;margin-top:1px}
+.search{flex:1;max-width:700px;position:relative}
+.search input{width:100%;height:44px;border:1px solid var(--line);border-radius:23px;background:#f8fafc;padding:0 18px 0 45px;outline:none}
+.search input:focus{border-color:#8bb5ff;background:#fff;box-shadow:0 0 0 3px #2563eb14}
+.search:before{content:"⌕";position:absolute;left:18px;top:8px;font-size:22px;color:var(--muted);z-index:2}
+.header-actions{margin-left:auto;display:flex;align-items:center;gap:9px}
+.live{display:flex;align-items:center;gap:7px;border:1px solid #bbf7d0;background:#f0fdf4;color:#15803d;padding:8px 11px;border-radius:18px;font-size:12px;font-weight:700}
+.live i{width:7px;height:7px;background:#22c55e;border-radius:50%;box-shadow:0 0 0 4px #22c55e22}
+.icon-btn{width:40px;height:40px;border:1px solid var(--line);background:#fff;border-radius:9px}
+
+aside{background:#fff;border-right:1px solid var(--line);padding:17px 12px;position:sticky;top:70px;height:calc(100vh - 70px);overflow:auto}
+.side-title{font-size:11px;color:#8a94a6;text-transform:uppercase;letter-spacing:.08em;margin:5px 10px 9px}
+.nav{display:flex;align-items:center;gap:11px;width:100%;border:0;background:transparent;text-align:left;padding:11px 12px;border-radius:10px;color:#596579;margin:3px 0}
+.nav:hover{background:#f5f8fc}.nav.active{background:var(--blue2);color:#1d4ed8;font-weight:750}
+.nav .ico{width:26px;text-align:center;font-size:17px}
+.sub-count{margin-left:auto;font-size:11px;background:#eef2f7;padding:2px 7px;border-radius:10px}
+.divider{height:1px;background:var(--line);margin:17px 7px}
+.city-status{padding:12px;margin:8px 4px;background:#f8fafc;border:1px solid var(--line);border-radius:12px}
+.city-status b{display:block;font-size:13px}.city-status small{color:var(--muted)}
+
+main{padding:20px;min-width:0;overflow:hidden}
+.page-head{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:17px}
+.page-head h1{margin:0;font-size:25px;letter-spacing:-.5px}.page-head p{margin:4px 0 0;color:var(--muted)}
+.location-pill{background:#fff;border:1px solid var(--line);border-radius:20px;padding:8px 12px;color:#526075}
+
+.category-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:15px}
+.cat{border:1px solid var(--line);background:#fff;border-radius:12px;padding:13px;text-align:left;box-shadow:0 2px 7px #17203308;transition:.2s}
+.cat:hover{transform:translateY(-1px);box-shadow:var(--shadow)}
+.cat.active{border-color:#9fc0ff;box-shadow:0 0 0 2px #2563eb12}
+.cat-top{display:flex;align-items:center;gap:9px}.cat-icon{width:34px;height:34px;border-radius:9px;display:grid;place-items:center;font-size:18px}
+.cat b{font-size:13px}.cat small{display:block;color:var(--muted);margin-top:7px}.cat .status{margin-left:auto;font-size:10px;color:var(--green);font-weight:700}
+
+.dashboard{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(300px,.8fr);gap:14px}
+.left,.right{min-width:0}
+.panel{background:#fff;border:1px solid var(--line);border-radius:14px;box-shadow:0 2px 8px #17203309}
+.panel-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.panel-head h2{font-size:15px;margin:0}.panel-head small{color:var(--muted)}
+.panel-body{padding:14px}
+
+#map{height:455px;min-height:455px;width:100%;border-radius:11px;overflow:hidden;background:#dfe8ef;position:relative}
+.leaflet-container{height:100%!important;width:100%!important;background:#dfe8ef;font-family:inherit}
+.map-loading{position:absolute;inset:0;z-index:450;display:grid;place-items:center;background:linear-gradient(135deg,#eaf2f8,#dce9f1);color:#526075;font-size:13px}
+.map-loading.hidden{display:none}
+.map-error{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:600;background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:16px;text-align:center;box-shadow:0 8px 25px #17203320;max-width:320px}
+.map-error b{display:block;margin-bottom:5px;color:#172033}
+.map-wrap{position:relative}.map-controls{position:absolute;z-index:500;right:12px;top:12px;display:flex;flex-direction:column;gap:6px}
+.map-controls button{width:36px;height:36px;border:0;background:#fff;border-radius:8px;box-shadow:0 2px 8px #0002;font-size:18px}
+.map-chip{position:absolute;z-index:500;left:12px;top:12px;background:#fff;padding:8px 11px;border-radius:9px;box-shadow:0 2px 8px #0002;font-weight:700;font-size:12px}
+.map-legend-corner{position:absolute;z-index:500;left:12px;bottom:12px;background:rgba(255,255,255,.96);border:1px solid #dbe3ea;border-radius:10px;box-shadow:0 3px 12px #0002;padding:9px 11px;min-width:165px;font-size:11px;color:#526075;backdrop-filter:blur(5px)}
+.map-legend-corner .legend-title{font-weight:800;color:#172033;margin-bottom:6px;font-size:11px}
+.map-legend-corner .legend-row{display:flex;align-items:center;gap:7px;margin:4px 0;white-space:nowrap}
+.legend-dot{width:10px;height:10px;border-radius:50%;display:inline-block;border:2px solid #fff;box-shadow:0 1px 3px #0004;flex:0 0 auto}
+.legend-dot.red{background:#dc2626}.legend-dot.orange{background:#ea8a00}.legend-dot.green{background:#16a34a}.legend-dot.blue{background:#2563eb}
+/* Keep provider attribution visible but prevent the default Leaflet label from covering map content. */
+.map-attribution{position:absolute;z-index:700;right:7px;bottom:5px;background:rgba(255,255,255,.88);padding:2px 6px;border-radius:5px;font-size:9px;color:#667085;pointer-events:none}
+.leaflet-popup-content-wrapper{border-radius:10px}.leaflet-popup-content{margin:10px 12px;font-size:12px;line-height:1.4}.search-result-popup .leaflet-popup-content-wrapper{border:2px solid #2563eb}.search-result-popup .leaflet-popup-content b{color:#1d4ed8;font-size:13px}
+.legend{display:flex;gap:13px;flex-wrap:wrap;margin-top:9px;font-size:11px;color:var(--muted)}
+
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+.kpi{padding:12px;background:#fff;border:1px solid var(--line);border-radius:12px}
+.kpi small{color:var(--muted)}.kpi b{display:block;font-size:21px;margin-top:3px}.up{color:var(--green)}.down{color:var(--red)}
+
+.feature-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.feature-card{border:1px solid var(--line);border-radius:11px;padding:12px;background:#fff}
+.feature-card h3{font-size:13px;margin:0 0 8px;display:flex;justify-content:space-between}
+.feature-card p{font-size:12px;color:var(--muted);margin:0 0 9px}
+.badge{font-size:10px;border-radius:12px;padding:3px 7px;font-weight:700}.good{background:#dcfce7;color:#15803d}.medium{background:#fef3c7;color:#a16207}.bad{background:#fee2e2;color:#b91c1c}.info{background:#e0e7ff;color:#4338ca}
+.mini-row{display:flex;justify-content:space-between;font-size:11px;padding:5px 0;border-top:1px solid #f0f2f5}.mini-row:first-of-type{border-top:0}
+
+.alert-list{display:flex;flex-direction:column;gap:8px}.alert{padding:10px;border-radius:9px;background:#f8fafc;border:1px solid var(--line);display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:start}
+.alert-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#fee2e2}.alert b{font-size:12px}.alert small{display:block;color:var(--muted);margin-top:2px}.time{font-size:10px;color:var(--muted)}
+
+.resource-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}.resource{padding:10px;border:1px solid var(--line);border-radius:9px}.resource b{display:block;font-size:12px}.resource small{color:var(--muted)}.live-feed{display:flex;flex-direction:column;gap:8px}.feed-item{display:grid;grid-template-columns:30px 1fr auto;gap:8px;align-items:center;padding:9px 10px;border:1px solid var(--line);border-radius:9px;background:#f8fafc}.feed-icon{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:#eef2ff}.feed-item b{font-size:11px;display:block}.feed-item small{display:block;color:var(--muted);margin-top:2px;font-size:10px}.feed-time{font-size:9px;color:var(--muted);white-space:nowrap}.insight{padding:12px;border-radius:10px;background:linear-gradient(135deg,#eff6ff,#f8fafc);border:1px solid #dbeafe}.insight-top{display:flex;align-items:center;gap:8px;margin-bottom:7px}.insight-top span{font-size:18px}.insight b{font-size:12px}.insight p{font-size:11px;line-height:1.5;color:#526075;margin:0}.insight-tag{display:inline-block;margin-top:9px;padding:4px 7px;border-radius:999px;background:#dbeafe;color:#1d4ed8;font-size:9px;font-weight:800}.civic-list{display:flex;flex-direction:column;gap:7px}.civic-item{display:flex;gap:9px;align-items:center;padding:8px 9px;border-radius:8px;background:#fafafa;border:1px solid #eef1f4}.civic-item .ci{font-size:17px}.civic-item b{font-size:11px;display:block}.civic-item small{font-size:9px;color:var(--muted)}
+
+
+/* Interactive City Pulse */
+.city-pulse{margin-top:12px;overflow:hidden}
+.pulse-grid{display:grid;grid-template-columns:1.35fr .85fr;gap:12px}
+.pulse-health{position:relative;min-height:190px;padding:16px;border-radius:12px;background:linear-gradient(135deg,#eff6ff 0%,#ffffff 62%);border:1px solid #dbeafe;overflow:hidden}
+.pulse-health:after{content:"";position:absolute;width:180px;height:180px;right:-70px;top:-70px;border-radius:50%;border:1px solid #bfdbfe;box-shadow:0 0 0 18px #dbeafe55,0 0 0 36px #dbeafe33;animation:pulseRing 3.2s ease-in-out infinite}
+@keyframes pulseRing{50%{transform:scale(1.08);opacity:.65}100%{transform:scale(1);opacity:1}}
+.pulse-label{font-size:11px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.07em}
+.pulse-score{display:flex;align-items:center;gap:15px;margin-top:8px}
+.pulse-number{font-size:39px;font-weight:850;line-height:1;color:#1d4ed8;min-width:92px}
+.pulse-number small{font-size:12px;color:#64748b;font-weight:600}
+.pulse-bar{height:8px;width:min(260px,100%);background:#dbeafe;border-radius:99px;overflow:hidden;margin:8px 0}
+.pulse-bar i{display:block;height:100%;width:86%;background:linear-gradient(90deg,#2563eb,#22c55e);border-radius:99px;animation:barIn 1.1s ease-out}
+@keyframes barIn{from{width:0}to{width:86%}}
+.pulse-stats{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:15px}
+.pulse-stat{background:#fff;border:1px solid #e5eaf1;border-radius:9px;padding:8px}.pulse-stat b{display:block;font-size:13px}.pulse-stat small{font-size:9px;color:#64748b}
+.pulse-area{padding:15px;border:1px solid var(--line);border-radius:12px;background:#fff}
+.pulse-area h3{margin:0;font-size:13px}.pulse-area p{margin:4px 0 10px;font-size:10px;color:var(--muted)}
+.pulse-select{width:100%;border:1px solid var(--line);border-radius:8px;padding:9px;background:#f8fafc;outline:none}
+.pulse-result{margin-top:10px;padding:9px;border-radius:9px;background:#f8fafc;border:1px solid var(--line);font-size:10px}.pulse-result b{font-size:11px}
+.scan-btn{width:100%;margin-top:8px;border:0;border-radius:8px;padding:9px;background:var(--blue);color:#fff;font-weight:700}.scan-btn.scanning{background:#64748b}
+.scan-dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#22c55e;margin-right:5px;box-shadow:0 0 0 4px #22c55e22;animation:blink 1s infinite}
+@keyframes blink{50%{opacity:.25;transform:scale(.75)}}
+.pulse-activity{margin-top:12px;padding:13px;border:1px solid var(--line);border-radius:12px;background:#fff}.pulse-activity h3{margin:0 0 8px;font-size:12px}
+.activity-row{display:grid;grid-template-columns:18px 1fr auto;gap:8px;align-items:center;padding:6px 0;border-top:1px solid #f0f2f5;font-size:10px}.activity-row:first-of-type{border-top:0}.activity-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px #22c55e18}.activity-row small{color:var(--muted)}
+@media(max-width:700px){.pulse-grid{grid-template-columns:1fr}.pulse-stats{grid-template-columns:repeat(3,1fr)}}
+
+
+/* Civic Data Fusion */
+.data-fusion{margin-top:12px;overflow:hidden}
+.fusion-grid{display:grid;grid-template-columns:1.2fr .8fr;gap:12px}
+.fusion-kicker{font-size:10px;text-transform:uppercase;letter-spacing:.07em;color:#64748b;font-weight:800;margin-bottom:7px}
+.source-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.source-card{border:1px solid var(--line);border-radius:10px;padding:10px;background:#fff}
+.source-top{display:flex;align-items:center;gap:8px}.source-icon{width:31px;height:31px;border-radius:8px;display:grid;place-items:center;background:#eef2ff;font-size:16px}
+.source-name{font-size:11px;font-weight:800;line-height:1.2}.source-status{margin-left:auto;font-size:8px;font-weight:800;color:#15803d;background:#dcfce7;padding:3px 6px;border-radius:999px}
+.source-value{font-size:13px;font-weight:800;margin-top:7px}.source-area{font-size:9px;color:var(--muted);margin-top:2px}.source-sync{font-size:9px;color:#94a3b8;margin-top:6px}
+.fusion-summary{border:1px solid #dbeafe;border-radius:11px;padding:13px;background:linear-gradient(135deg,#eff6ff,#fff)}
+.fusion-big{display:flex;align-items:flex-end;gap:7px;margin:5px 0 10px}.fusion-big b{font-size:32px;line-height:1;color:#1d4ed8}.fusion-big small{font-size:10px;color:#64748b;padding-bottom:3px}
+.fusion-metrics{display:grid;grid-template-columns:1fr 1fr;gap:7px}.fusion-metric{border:1px solid #e2e8f0;background:#fff;border-radius:8px;padding:8px}.fusion-metric b{display:block;font-size:11px}.fusion-metric small{display:block;font-size:9px;color:var(--muted);margin-top:2px}.fusion-note{margin-top:9px;font-size:9px;line-height:1.45;color:#526075}
+.correlation-card{margin-top:10px;border:1px solid #fde68a;background:#fffbeb;border-radius:11px;padding:12px}.correlation-head{display:flex;justify-content:space-between;gap:10px;align-items:center}.correlation-title{font-size:12px;font-weight:800}.correlation-badge{font-size:8px;font-weight:800;color:#a16207;background:#fef3c7;padding:4px 7px;border-radius:999px}.correlation-main{display:grid;grid-template-columns:26px 1fr;gap:8px;margin-top:8px}.correlation-icon{width:26px;height:26px;border-radius:7px;background:#fef3c7;display:grid;place-items:center}.correlation-main b{font-size:11px}.correlation-main p{font-size:10px;color:#6b7280;margin:3px 0 0;line-height:1.45}.correlation-why{display:grid;grid-template-columns:22px 1fr;gap:7px;margin-top:9px;padding:8px 9px;border-radius:8px;background:#fff;border:1px solid #fde68a}.correlation-why>span{width:22px;height:22px;border-radius:6px;background:#fffbeb;display:grid;place-items:center}.correlation-why b{font-size:10px}.correlation-why p{font-size:9px;color:#6b7280;line-height:1.4;margin:2px 0 0}.correlation-meta{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}.correlation-meta span{font-size:8px;color:#64748b;background:#fff;border:1px solid #fde68a;border-radius:999px;padding:3px 6px}
+@media(max-width:700px){.fusion-grid{grid-template-columns:1fr}.source-grid{grid-template-columns:1fr 1fr}}
+
+
+.actions{display:flex;gap:7px;flex-wrap:wrap}.btn{border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 10px}.btn.primary{background:var(--blue);color:#fff;border-color:var(--blue)}
+
+.ai-assistant{margin-top:12px}
+.ai-body{padding:12px}
+.ai-status{display:flex;align-items:center;gap:7px;color:#64748b;font-size:11px;margin-bottom:8px}
+.ai-status i{width:7px;height:7px;border-radius:50%;background:#22c55e;box-shadow:0 0 0 4px #22c55e22}
+.ai-messages{height:180px;overflow:auto;display:flex;flex-direction:column;gap:7px;padding:2px 2px 8px}
+.ai-msg{max-width:88%;padding:8px 10px;border-radius:10px;font-size:12px;line-height:1.4}
+.ai-msg.bot{align-self:flex-start;background:#f1f5f9;border:1px solid #e2e8f0}
+.ai-msg.user{align-self:flex-end;background:#2563eb;color:#fff}
+.ai-compose{display:flex;gap:6px}
+.ai-compose input{min-width:0;flex:1;border:1px solid var(--line);border-radius:9px;padding:9px 10px;outline:none}
+.ai-compose input:focus{border-color:#8bb5ff;box-shadow:0 0 0 3px #2563eb14}
+.ai-compose button{border:0;background:#2563eb;color:#fff;border-radius:9px;padding:0 13px;font-weight:700}
+.ai-suggestions{display:flex;gap:5px;overflow:auto;margin-top:7px}
+.ai-suggestions button{white-space:nowrap;border:1px solid var(--line);background:#fff;color:#526075;border-radius:8px;padding:5px 8px;font-size:10px}
+
+#toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%);background:#172033;color:#fff;padding:10px 16px;border-radius:8px;z-index:3000;opacity:0;pointer-events:none;transition:.25s}
+.modal-backdrop{display:none;position:fixed;inset:0;background:#17203366;z-index:2000;align-items:center;justify-content:center;padding:20px}
+.modal{background:#fff;border-radius:14px;width:min(600px,100%);box-shadow:0 20px 60px #0004;overflow:hidden}.modal-head{padding:15px 17px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between}.modal-body{padding:17px}.modal-body label{display:block;font-size:12px;font-weight:700;margin:10px 0 5px}.modal-body input,.modal-body select{width:100%;padding:9px;border:1px solid var(--line);border-radius:8px}
+.close{border:0;background:transparent;font-size:20px}
+
+@media(max-width:1100px){.app{grid-template-columns:210px 1fr}.dashboard{grid-template-columns:1fr}.right{display:grid;grid-template-columns:1fr 1fr;gap:12px}.right>.panel{min-width:0}}
+@media(max-width:780px){.app{display:block}header{position:relative;flex-wrap:wrap}.brand{width:auto}.header-actions{margin-left:0}aside{position:relative;top:0;height:auto;display:flex;overflow-x:auto;border-right:0;border-bottom:1px solid var(--line);padding:8px}.side-title,.city-status,.divider{display:none}.nav{white-space:nowrap;width:auto}.category-tabs{grid-template-columns:1fr 1fr}.kpis{grid-template-columns:1fr 1fr}.right{display:block}main{padding:12px}.page-head{align-items:flex-start}.location-pill{display:none}}
+@media(max-width:500px){.category-tabs{grid-template-columns:1fr}.feature-grid{grid-template-columns:1fr}.search{order:3;flex-basis:100%}#map{height:390px}}
+
+/* ===== CityPulse Level 3 enhancements ===== */
+.l3-strip{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:0 0 12px}
+.l3-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 9px;font-size:10px;color:#526075}
+.l3-chip.live{padding:6px 9px}
+.l3-chip strong{color:#172033}
+.l3-admin{position:fixed;inset:0;background:#17203366;z-index:2500;display:none;align-items:center;justify-content:center;padding:18px}
+.l3-admin.open{display:flex}
+.l3-admin-card{width:min(980px,100%);max-height:90vh;overflow:auto;background:#fff;border-radius:16px;box-shadow:0 25px 80px #0004}
+.l3-admin-head{display:flex;justify-content:space-between;gap:12px;align-items:center;padding:16px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#fff;z-index:2}
+.l3-admin-head h2{margin:0;font-size:17px}.l3-admin-head small{color:var(--muted)}
+.l3-admin-body{padding:16px}
+.l3-stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;margin-bottom:12px}
+.l3-stat{border:1px solid var(--line);border-radius:11px;padding:12px;background:#f8fafc}.l3-stat small{color:var(--muted);display:block}.l3-stat b{font-size:22px;display:block;margin-top:3px}
+.l3-admin-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.l3-table{width:100%;border-collapse:collapse;font-size:11px}.l3-table th,.l3-table td{text-align:left;padding:8px;border-bottom:1px solid #eef1f4;vertical-align:top}.l3-table th{color:#64748b;font-size:10px;text-transform:uppercase}
+.l3-source-note{font-size:10px;color:#64748b;line-height:1.5;margin-top:10px}
+.report-marker{width:30px;height:30px;border-radius:50%;display:grid;place-items:center;background:#7c3aed;color:#fff;border:3px solid #fff;box-shadow:0 3px 12px #0005;font-size:12px}
+@media(max-width:780px){.l3-stat-grid{grid-template-columns:1fr 1fr}.l3-admin-grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="app">
+<header>
+  <div class="brand">CityPulse <span id="brandLocation">Jaipur Civic Intelligence Dashboard</span></div>
+  <div class="search"><input id="search" autocomplete="off" placeholder="Search a city, area, emergency, traffic, weather…"></div>
+  <div class="header-actions">
+    <div class="live"><i></i> DEMO LIVE · SYNTHETIC</div>
+    <button class="icon-btn" id="locBtn" title="Use my location">⌖</button>
+    <button class="icon-btn" id="notifyBtn" title="Notifications">🔔</button>
+  </div>
+</header>
+
+<aside>
+  <div class="side-title">Civic Services</div>
+  <button class="nav active" data-cat="safety"><span class="ico">🚨</span>Safety & Emergency <span class="sub-count">4</span></button>
+  <button class="nav" data-cat="weather"><span class="ico">☁️</span>Weather & Environment <span class="sub-count">2</span></button>
+  <button class="nav" data-cat="mobility"><span class="ico">🚦</span>Transport &amp; Traffic <span class="sub-count">6</span></button>
+  <button class="nav" data-cat="resources"><span class="ico">🏛️</span>Local Resources <span class="sub-count">4</span></button>
+  <div class="divider"></div>
+  <div class="side-title">Quick Actions</div>
+  <button class="nav" id="reportBtn"><span class="ico">＋</span>Report an issue</button>
+  <button class="nav" id="refreshBtn"><span class="ico">↻</span>Refresh dashboard</button>
+  <div class="city-status"><b id="sideCityName">Jaipur City Status</b><small id="sideStatus">All core services operational</small></div>
+</aside>
+
+<main>
+  <div class="page-head">
+    <div><h1 id="title">Safety & Emergency</h1><p id="subtitle">Emergency response, incidents and health requests across Jaipur.</p></div>
+    <div class="location-pill" id="locationPill">📍 Jaipur, Rajasthan · <span id="clock"></span></div>
+  </div>
+
+  <div class="category-tabs">
+    <button class="cat active" data-cat="safety">
+      <div class="cat-top"><div class="cat-icon" style="background:#fee2e2">🚨</div><b>Safety & Emergency</b><span class="status">LIVE</span></div>
+      <small>Alerts · incidents · emergency vehicles · health requests</small>
+    </button>
+    <button class="cat" data-cat="weather">
+      <div class="cat-top"><div class="cat-icon" style="background:#e0f2fe">🌦️</div><b>Weather & Environment</b><span class="status">LIVE</span></div>
+      <small>Weather · Air Quality Index</small>
+    </button>
+    <button class="cat" data-cat="mobility">
+      <div class="cat-top"><div class="cat-icon" style="background:#fef3c7">🚦</div><b>Transport & Traffic</b><span class="status">LIVE</span></div>
+      <small>Transport · traffic · roads · parking · fuel</small>
+    </button>
+    <button class="cat" data-cat="resources">
+      <div class="cat-top"><div class="cat-icon" style="background:#ede9fe">🏛️</div><b>Local Resources</b><span class="status">LIVE</span></div>
+      <small>Power · network · water · holidays</small>
+    </button>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+
+  <div class="dashboard">
+    <section class="left">
+      <div class="panel">
+        <div class="panel-head"><div><h2 id="mapTitle">Jaipur Emergency & Civic Map</h2><small>Live operational view</small></div><div class="actions"><button class="btn" id="resetMap">Reset</button><button class="btn primary" id="addIncident">＋ Add incident</button></div></div>
+        <div class="panel-body">
+          <div class="map-wrap">
+            <div class="map-chip" id="mapChip">🚨 Emergency layer</div>
+            <div class="map-controls"><button id="zin">+</button><button id="zout">−</button><button id="fit">⌖</button></div>
+            <div id="map">
+              <div class="map-loading" id="mapLoading">Loading Jaipur street map…</div>
+              <div class="map-attribution">© Esri — World Street Map</div>
+            </div>
+            <div class="map-legend-corner" aria-label="Map marker legend">
+              <div class="legend-title">📍 Map Marker Guide</div>
+              <div class="legend-row"><span class="legend-dot red"></span><b>Danger / Alert</b></div>
+              <div class="legend-row"><span class="legend-dot orange"></span><b>Caution / Monitor</b></div>
+              <div class="legend-row"><span class="legend-dot green"></span><b>No Danger / Normal</b></div>
+              <div class="legend-row"><span class="legend-dot blue"></span><b>Searched Location</b></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+
+      <div class="panel ai-assistant">
+        <div class="panel-head">
+          <div><h2>🤖 CityPulse AI Assistant</h2><small>Ask about Jaipur civic services</small></div>
+          <span class="badge info">AI</span>
+        </div>
+        <div class="ai-body">
+          <div class="ai-status"><i></i> AI ready · dashboard-grounded</div>
+          <div class="ai-messages" id="aiMessages">
+            <div class="ai-msg bot">Hi! I’m CityPulse AI. Ask me about emergency alerts, weather, AQI, traffic, parking, fuel, power, water, network issues or government holidays.</div>
+          </div>
+          <div class="ai-compose">
+            <input id="aiInput" placeholder="Ask: Where is traffic heavy?">
+            <button id="aiSend">Send</button>
+          </div>
+          <div class="ai-suggestions">
+            <button data-ai="Show emergency alerts">Emergency alerts</button>
+            <button data-ai="What is the weather?">Weather</button>
+            <button data-ai="Where is traffic heavy?">Traffic</button>
+            <button data-ai="Find parking">Parking</button>
+            <button data-ai="Any power outage?">Power</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><h2 id="subFeatureTitle">Safety & Emergency Services</h2><small id="updated">Updated just now</small></div>
+        <div class="panel-body"><div class="feature-grid" id="featureGrid"></div></div>
+      </div>
+
+      <div class="panel city-pulse">
+        <div class="panel-head"><div><h2 id="cityPulseTitle">🏙️ Jaipur City Pulse</h2><small>Interactive city overview</small></div><span class="badge good"><span class="scan-dot"></span>LIVE</span></div>
+        <div class="panel-body">
+          <div class="pulse-grid">
+            <div class="pulse-health">
+              <div class="pulse-label">City Health</div>
+              <div class="pulse-score"><div class="pulse-number" id="pulseScore">86<small>/100</small></div><div><b id="pulseStatus">Healthy city signals</b><div class="pulse-bar"><i></i></div><small style="color:#64748b">Live dashboard health indicator</small></div></div>
+              <div class="pulse-stats"><div class="pulse-stat"><b>🚦 Moderate</b><small>Traffic</small></div><div class="pulse-stat"><b>🌡️ 31°C</b><small>Weather</small></div><div class="pulse-stat"><b>💨 118</b><small>AQI</small></div></div>
+            </div>
+            <div class="pulse-area">
+              <h3>📍 My Area</h3><p>Select an area and check its current civic status.</p>
+              <select class="pulse-select" id="myArea">
+                <option>Mansarovar</option><option>Malviya Nagar</option><option>Vaishali Nagar</option><option>C-Scheme</option><option>Amer</option><option>Sanganer</option><option>Jhotwara</option><option>Chomu</option><option>Kukas</option>
+              </select>
+              <div class="pulse-result" id="areaResult"><b>🟢 Mansarovar</b><br><span>Overall status: Normal · Water notice monitored</span></div>
+              <button class="scan-btn" id="scanArea">🔎 Check My Area</button>
+            </div>
+          </div>
+          <div class="pulse-activity">
+            <h3>⚡ Today’s City Activity</h3>
+            <div class="activity-row"><span class="activity-dot"></span><div><b>Traffic update</b><small> · MI Road corridor</small></div><span>2 min ago</span></div>
+            <div class="activity-row"><span class="activity-dot"></span><div><b>Water notice</b><small> · Mansarovar</small></div><span>8 min ago</span></div>
+            <div class="activity-row"><span class="activity-dot"></span><div><b>Power monitoring</b><small> · Vaishali Nagar</small></div><span>11 min ago</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="panel data-fusion">
+        <div class="panel-head">
+          <div><h2>🧩 Civic Data Fusion</h2><small>Normalized multi-source civic signals</small></div>
+          <span class="badge info" id="fusionFeedBadge">4 FEEDS</span>
+        </div>
+        <div class="panel-body">
+          <div class="fusion-grid">
+            <div>
+              <div class="fusion-kicker">Connected civic feeds</div>
+              <div class="source-grid" id="feedSources"></div>
+            </div>
+            <div class="fusion-summary">
+              <div class="fusion-kicker">Unified data model</div>
+              <div class="fusion-big"><b id="fusionFeedCount">4</b><small>feeds normalized</small></div>
+              <div class="fusion-metrics">
+                <div class="fusion-metric"><b id="fusionRecords">96</b><small>normalized records</small></div>
+                <div class="fusion-metric"><b id="fusionFreshness">Live</b><small>sync health</small></div>
+              </div>
+              <div class="fusion-note">Common schema: <b>source · area · metric · value · severity · timestamp</b></div>
+            </div>
+          </div>
+          <div class="correlation-card" id="correlationCard">
+            <div class="correlation-head"><div class="correlation-title">🔎 Anomaly &amp; Correlation Engine</div><span class="correlation-badge">RULE-BASED · DEMO</span></div>
+            <div class="correlation-main"><div class="correlation-icon">↗</div><div><b id="correlationTitle">Checking current civic signals…</b><p id="correlationText">Comparing recent normalized signals within the same area and time window.</p></div></div>
+            <div class="correlation-why"><span>💡</span><div><b>Why it matters</b><p id="correlationWhy">This summary is grounded in the current synthetic feed signals and should be read as a possible link, not a confirmed cause.</p></div></div>
+            <div class="correlation-meta" id="correlationMeta"><span>Rolling window: 30 min</span><span>Grounded in demo feeds</span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="right">
+      <div class="panel">
+        <div class="panel-head"><h2>Live Alerts</h2><span class="badge bad" id="alertCount">3 active</span></div>
+        <div class="panel-body"><div class="alert-list" id="alerts"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><h2>Local Resources</h2><small>Jaipur</small></div>
+        <div class="panel-body"><div class="resource-grid" id="resources"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><div><h2>📡 Live City Feed</h2><small>Latest civic signals</small></div><span class="badge info">LIVE</span></div>
+        <div class="panel-body"><div class="live-feed" id="liveFeed"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><div><h2>🤖 City Insight</h2><small>What is happening &amp; why it matters</small></div><span class="badge info">GROUNDED</span></div>
+        <div class="panel-body"><div class="insight" id="cityInsight"></div></div>
+      </div>
+      <div class="panel" style="margin-top:12px">
+        <div class="panel-head"><div><h2>📅 Civic Activity</h2><small>Upcoming &amp; planned</small></div></div>
+        <div class="panel-body"><div class="civic-list">
+          <div class="civic-item"><span class="ci">🚧</span><div><b>Road work monitoring</b><small>Tonk Road corridor · Active</small></div></div>
+          <div class="civic-item"><span class="ci">💧</span><div><b>Water maintenance</b><small>Mansarovar · Notice issued</small></div></div>
+          <div class="civic-item"><span class="ci">🏛️</span><div><b>Government services</b><small>Jaipur · Calendar updated</small></div></div>
+        </div></div>
+      </div>
+    </section>
+  </div>
+</main>
+</div>
+
+<div id="toast"></div>
+
+<div class="modal-backdrop" id="modal">
+  <div class="modal">
+    <div class="modal-head"><b>Report a civic issue</b><button class="close" id="closeModal">×</button></div>
+    <div class="modal-body">
+      <label>Issue type</label>
+      <select id="issueType"><option>Emergency</option><option>Road condition</option><option>Water supply</option><option>Power outage</option><option>Network connectivity</option><option>Traffic</option><option>Other</option></select>
+      <label>Area</label><input id="issueArea" placeholder="e.g. Sanganer">
+      <label>Description</label><input id="issueDesc" placeholder="Briefly describe the issue">
+      <div style="margin-top:15px;text-align:right"><button class="btn" id="cancelModal">Cancel</button> <button class="btn primary" id="submitIssue">Submit report</button></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" onerror="window.leafletLoadFailed=true">
+
+/* ================================================================
+   CITYPULSE LEVEL 3 — integration, live enrichment, analytics,
+   report markers, admin view and export.
+   ================================================================ */
+(function level3(){
+  const esc=(v)=>String(v??'').replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  const fmtTime=(iso)=>{try{return new Date(iso).toLocaleString('en-IN',{hour:'2-digit',minute:'2-digit',day:'2-digit',month:'short'});}catch{return iso||''}};
+
+  // A compact provenance strip makes the demo transparent about which feeds are live.
+  const main=document.querySelector('main');
+  if(main){
+    const strip=document.createElement('div');
+    strip.className='l3-strip';
+    strip.innerHTML=`<span class="l3-chip"><strong>CityPulse v3</strong> · Civic Intelligence</span>
+      <span class="l3-chip" id="liveWeatherChip">🌦️ Weather: syncing…</span>
+      <span class="l3-chip" id="liveAqiChip">💨 AQI: syncing…</span>
+      <span class="l3-chip">🚦 Traffic: synthetic demo feed</span>
+      <span class="l3-chip">🧩 Correlation: rules engine</span>`;
+    const first=main.querySelector('.page-head');
+    if(first)main.insertBefore(strip,first);
+  }
+
+  // Admin button
+  const headerActions=document.querySelector('.header-actions');
+  if(headerActions){
+    const b=document.createElement('button'); b.className='icon-btn'; b.title='Open analytics'; b.textContent='📊'; b.id='analyticsBtn';
+    headerActions.insertBefore(b,headerActions.firstChild);
+    b.onclick=()=>document.getElementById('l3Admin').classList.add('open');
+  }
+
+  // Admin modal
+  const modal=document.createElement('div'); modal.id='l3Admin'; modal.className='l3-admin';
+  modal.innerHTML=`<div class="l3-admin-card">
+    <div class="l3-admin-head"><div><h2>📊 CityPulse Operations & Analytics</h2><small>Decision-support view for the hackathon demo</small></div>
+      <div class="actions"><button class="btn" id="exportReports">Export CSV</button><button class="close" id="closeL3">×</button></div></div>
+    <div class="l3-admin-body">
+      <div class="l3-stat-grid" id="l3Stats"></div>
+      <div class="l3-admin-grid">
+        <div class="panel"><div class="panel-head"><h2>Recent citizen reports</h2><small id="reportCount">0</small></div><div class="panel-body" id="l3Reports"></div></div>
+        <div class="panel"><div class="panel-head"><h2>Data pipeline</h2><small>Provenance</small></div><div class="panel-body" id="l3Pipeline"></div></div>
+      </div>
+      <div class="l3-source-note"><b>Data transparency:</b> Weather and AQI are enriched from Open-Meteo when reachable. Traffic and incident values are synthetic hackathon feeds. Correlations are rule-based and indicate possible relationships, not confirmed causation. Open-Meteo data requires attribution; see the project README.</div>
+    </div></div>`;
+  document.body.appendChild(modal);
+  document.getElementById('closeL3').onclick=()=>modal.classList.remove('open');
+  modal.addEventListener('click',e=>{if(e.target===modal)modal.classList.remove('open')});
+
+  let reportLayer=null;
+  function ensureReportLayer(){
+    if(window.map && !reportLayer) reportLayer=L.layerGroup().addTo(map);
+    return reportLayer;
+  }
+
+  async function loadReports(){
+    try{
+      const r=await fetch('/api/reports?limit=50'); if(!r.ok) return [];
+      const data=await r.json(); const reports=data.reports||[];
+      const rl=ensureReportLayer();
+      if(rl){
+        rl.clearLayers();
+        reports.filter(x=>Number.isFinite(x.latitude)&&Number.isFinite(x.longitude)).forEach(x=>{
+          const mk=L.marker([x.latitude,x.longitude],{icon:L.divIcon({className:'',html:'<div class="report-marker">⚑</div>',iconSize:[30,30],iconAnchor:[15,15]})});
+          mk.bindPopup(`<b>Citizen report #${esc(x.id)}</b><br>${esc(x.issue_type)} · ${esc(x.area)}<br><small>${esc(x.description)}</small><br><span style="color:#64748b">${fmtTime(x.created_at)}</span>`).addTo(rl);
+        });
+      }
+      const box=document.getElementById('l3Reports');
+      document.getElementById('reportCount').textContent=`${reports.length} stored`;
+      box.innerHTML=reports.length?`<table class="l3-table"><thead><tr><th>Issue</th><th>Area</th><th>Status</th><th>Time</th></tr></thead><tbody>${reports.slice(0,12).map(x=>`<tr><td><b>${esc(x.issue_type)}</b><br><small>${esc(x.description)}</small></td><td>${esc(x.area)}</td><td>${esc(x.status)}</td><td>${esc(fmtTime(x.created_at))}</td></tr>`).join('')}</tbody></table>`:'<div style="color:#64748b;font-size:12px">No citizen reports yet.</div>';
+      return reports;
+    }catch(e){return []}
+  }
+
+  async function syncLevel3(){
+    try{
+      const [dashR, fusionR, analyticsR]=await Promise.all([fetch('/api/dashboard'),fetch('/api/fusion'),fetch('/api/analytics')]);
+      const dash=dashR.ok?await dashR.json():null;
+      const fusion=fusionR.ok?await fusionR.json():null;
+      const analytics=analyticsR.ok?await analyticsR.json():null;
+      if(dash){
+        const t=dash.weather?.temperature; const a=dash.air_quality?.aqi;
+        const wchip=document.getElementById('liveWeatherChip'), achip=document.getElementById('liveAqiChip');
+        if(wchip)wchip.innerHTML=`🌦️ Weather: <strong>${t??'—'}°C</strong> · ${esc(dash.weather?.condition||'—')}`;
+        if(achip)achip.innerHTML=`💨 AQI: <strong>${a??'—'}</strong> · ${esc(dash.air_quality?.status||'—')}`;
+        const score=document.getElementById('pulseScore'); if(score)score.innerHTML=`${dash.health_score}<small>/100</small>`;
+        const stats=document.querySelectorAll('.pulse-stat');
+        if(stats[0])stats[0].querySelector('b').textContent=`🚦 ${dash.traffic?.status||'Moderate'}`;
+        if(stats[1])stats[1].querySelector('b').textContent=`🌡️ ${dash.weather?.temperature??'—'}°C`;
+        if(stats[2])stats[2].querySelector('b').textContent=`💨 ${dash.air_quality?.aqi??'—'}`;
+      }
+      if(fusion){
+        const c=fusion.correlation||{};
+        const title=document.getElementById('correlationTitle'); const text=document.getElementById('correlationText');
+        if(title)title.textContent=c.title||'No strong cross-feed anomaly detected';
+        if(text)text.textContent=c.message||'';
+        const meta=document.getElementById('correlationMeta');
+        if(meta)meta.innerHTML=`<span>${esc(c.confidence||'—')}</span><span>${esc(c.area||'Jaipur')}</span><span>${esc(fusion.window||'30 min')}</span><span>Possible link · not confirmed cause</span>`;
+        const sources=document.getElementById('feedSources');
+        if(sources && fusion.feeds){
+          sources.innerHTML=fusion.feeds.map(f=>`<div class="source-card"><div class="source-top"><span class="source-icon">${f.source==='Weather'?'🌦️':f.source==='Traffic'?'🚦':f.source==='AQI'?'💨':'🚨'}</span><div class="source-name">${esc(f.source)}</div><span class="source-status">${f.is_live?'LIVE':'DEMO'}</span></div><div class="source-value">${esc(f.display_value??f.value)}</div><div class="source-area">Area: ${esc(f.area)}</div><div class="source-sync">Normalized · ${f.is_live?'external feed':'synthetic feed'}</div></div>`).join('');
+          const badge=document.getElementById('fusionFeedBadge');if(badge)badge.textContent=fusion.feeds.length+' FEEDS';
+          const count=document.getElementById('fusionFeedCount');if(count)count.textContent=fusion.feeds.length;
+        }
+      }
+      if(analytics){
+        document.getElementById('l3Stats').innerHTML=`<div class="l3-stat"><small>City health</small><b>${analytics.health_score}/100</b></div><div class="l3-stat"><small>Traffic index</small><b>${analytics.traffic}%</b></div><div class="l3-stat"><small>AQI</small><b>${Math.round(analytics.aqi||0)}</b></div><div class="l3-stat"><small>Citizen reports</small><b>${analytics.reports_total}</b></div>`;
+        document.getElementById('l3Pipeline').innerHTML=`<div class="civic-list">${['Ingest live weather/AQI','Normalize source schema','Timestamp & compare signals','Run anomaly/correlation rules','Explain result in plain language'].map((x,i)=>`<div class="civic-item"><span class="ci">${['📡','🧩','⏱️','🔎','💬'][i]}</span><div><b>${x}</b><small>${i<2?'External feed':'CityPulse engine'}</small></div></div>`).join('')}</div><div class="l3-source-note">Top citizen-report area: <b>${esc(analytics.top_report_area?.area||'None')}</b> (${analytics.top_report_area?.count||0}).</div>`;
+      }
+      await loadReports();
+    }catch(e){console.warn('Level 3 sync failed',e)}
+  }
+
+  // Capture geolocation when reporting so reports can become map events.
+  let reportPosition=null;
+  if(navigator.geolocation){navigator.geolocation.getCurrentPosition(p=>{reportPosition={lat:p.coords.latitude,lon:p.coords.longitude}},()=>{}, {enableHighAccuracy:false,timeout:3000});}
+  const oldSubmit=document.getElementById('submitIssue');
+  if(oldSubmit){
+    const oldHandler=oldSubmit.onclick;
+    oldSubmit.onclick=async()=>{
+      const type=document.getElementById('issueType').value, area=document.getElementById('issueArea').value||'Jaipur', desc=document.getElementById('issueDesc').value||'Civic issue reported';
+      const severity=type==='Emergency'?'high':type==='Road condition'||type==='Traffic'?'medium':'low';
+      oldSubmit.disabled=true; oldSubmit.textContent='Submitting…';
+      try{
+        const r=await fetch('/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({issue_type:type,area,description:desc,severity,latitude:reportPosition?.lat,longitude:reportPosition?.lon})});
+        if(!r.ok)throw new Error('Report failed');
+        document.getElementById('modal').style.display='none';toast('Civic report stored in CityPulse');
+        if(typeof selectCat==='function')selectCat('safety');
+        await syncLevel3();
+      }catch(e){toast('Could not submit report. Is the backend running?')}
+      finally{oldSubmit.disabled=false;oldSubmit.textContent='Submit report';}
+    };
+  }
+
+  // CSV export for judges/admin demo.
+  document.getElementById('exportReports').onclick=async()=>{
+    const reports=await loadReports();
+    const header=['id','issue_type','area','description','severity','status','created_at'];
+    const lines=[header.join(',')].concat(reports.map(r=>header.map(k=>`"${String(r[k]??'').replace(/"/g,'""')}"`).join(',')));
+    const blob=new Blob([lines.join('\n')],{type:'text/csv'}); const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='citypulse-reports.csv'; a.click(); URL.revokeObjectURL(a.href);
+  };
+
+  // Run after the original app has initialized Leaflet and rendered the dashboard.
+  setTimeout(()=>{syncLevel3();},800);
+  setInterval(syncLevel3,60000);
+})();
+
+</script>
+<script>
+const categories={
+safety:{
+ title:"Safety & Emergency",
+ subtitle:"Emergency response, incidents and health requests across Jaipur.",
+ mapTitle:"Jaipur Emergency & Civic Map", mapChip:"🚨 Emergency layer",
+ kpis:[["🚨","Emergency Alerts","3","active"],["⚠️","Incidents","12","today"],["🚑","Emergency Vehicles","8","on route"],["🏥","Health Requests","5","pending"]],
+ features:[
+  ["🚨","Emergency Alerts","Priority notifications for public safety events.","3 active","bad"],
+  ["⚠️","Incidents Updates","Latest police, fire and civic incident reports.","12 incidents today","medium"],
+  ["🚑","Live Emergency Vehicles","Track ambulances, fire trucks and response units.","8 vehicles moving","good"],
+  ["🏥","Health Requests","Open health assistance and ambulance requests.","5 pending","medium"]
+ ],
+ alerts:[
+  ["🚨","Emergency response unit dispatched","Near MI Road · Response vehicle moving","2 min ago"],
+  ["⚠️","Road incident reported","Ajmer Road · One lane affected","8 min ago"],
+  ["🏥","Health request received","Mansarovar · Ambulance requested","14 min ago"]
+ ],
+ markers:[
+  [26.9124,75.7873,"🚑 Emergency vehicle · MI Road","good"],
+  [26.8820,75.8060,"⚠️ Incident · Tonk Road","warn"],
+  [26.8945,75.7430,"🏥 Health request · Sodala","warn"],
+  [26.9850,75.8500,"🚒 Fire response · Amer Road","danger"]
+ ]},
+weather:{
+ title:"Weather & Environment",
+ subtitle:"Current weather conditions and air quality across Jaipur.",
+ mapTitle:"Jaipur Weather & Environment Map",mapChip:"🌦️ Environment layer",
+ kpis:[["🌡️","Temperature","31°C","current"],["💧","Humidity","48%","current"],["💨","AQI","118","moderate"],["🌬️","Wind","14 km/h","NW"]],
+ features:[
+  ["🌦️","Weather","Current conditions and short-term weather status.","31°C · Clear","good"],
+  ["💨","Air Quality Index","City air-quality level and pollutant status.","AQI 118 · Moderate","medium"]
+ ],
+ alerts:[
+  ["💨","AQI moderate","Air quality is currently in the moderate range","Live"],
+  ["🌡️","Warm afternoon","Temperature is 31°C in central Jaipur","Live"]
+ ],
+ markers:[
+  [26.9124,75.7873,"🌡️ Weather station · Central Jaipur","good"],
+  [26.9025,75.8200,"💨 AQI monitor · Jawahar Nagar","warn"],
+  [26.9580,75.7900,"💨 AQI monitor · Vidhyadhar Nagar","warn"]
+ ]},
+mobility:{
+ title:"Transport & Traffic",
+ subtitle:"Transport availability, traffic, road conditions and nearby services.",
+ mapTitle:"Jaipur Transport & Traffic Map",mapChip:"🚦 Transport & Traffic layer",
+ kpis:[["🚌","Transport","82%","available"],["🚦","Traffic","Moderate","citywide"],["🅿️","Parking","64%","available"],["⛽","Fuel Stations","18","open"]],
+ features:[
+  ["🚌","Transport Availability","Availability of city buses and public transport.","82% available","good"],
+  ["🚦","Traffic Updates","Live congestion level and affected corridors.","Moderate","medium"],
+  ["🚧","Construction Availability","Construction zones and lane restrictions.","4 active zones","medium"],
+  ["🛣️","Road Conditions","Road surface, closures and lane conditions.","92% normal","good"],
+  ["🅿️","Parking Availability","Nearby parking capacity and availability.","64% available","good"],
+  ["⛽","Fuel Stations","Nearby fuel stations and service availability.","18 open","good"]
+ ],
+ alerts:[
+  ["🚦","Traffic building on Tonk Road","Moderate congestion detected","6 min ago"],
+  ["🚧","Construction zone active","Ajmer Road · Temporary lane restriction","18 min ago"],
+  ["🅿️","Parking availability updated","C-Scheme · 64% estimated capacity","Live"]
+ ],
+ markers:[
+  [26.9124,75.7873,"🚦 Traffic · MI Road","warn"],
+  [26.8845,75.8070,"🚧 Construction · Tonk Road","warn"],
+  [26.9150,75.8000,"🅿️ Parking · C-Scheme","good"],
+  [26.9300,75.7600,"⛽ Fuel station · Civil Lines","good"],
+  [26.9000,75.7400,"🛣️ Road · Sodala","good"]
+ ]},
+resources:{
+ title:"Local Resources Information",
+ subtitle:"Essential city-service information for Jaipur residents.",
+ mapTitle:"Jaipur Local Resources Map",mapChip:"🏛️ Services layer",
+ kpis:[["⚡","Power Outages","2","areas"],["📶","Network Issues","1","area"],["💧","Water Supply","3","notices"],["📅","Govt Holidays","1","upcoming"]],
+ features:[
+  ["⚡","Power Outages","Current electricity outage reports and restoration updates.","2 areas affected","medium"],
+  ["📶","Network Connectivity Issue","Reported mobile and internet connectivity issues.","1 area affected","medium"],
+  ["💧","Water Supply Issue","Supply interruptions, maintenance and restoration notices.","3 notices","medium"],
+  ["📅","Government Holidays","Upcoming public and government office holidays.","1 upcoming","info"]
+ ],
+ alerts:[
+  ["⚡","Power outage reported","Vaishali Nagar · Restoration in progress","11 min ago"],
+  ["💧","Water maintenance notice","Mansarovar · Supply may be interrupted","32 min ago"],
+  ["📶","Connectivity issue reported","Kukas area · Monitoring network status","45 min ago"]
+ ],
+ markers:[
+  [26.9120,75.7400,"⚡ Power outage · Vaishali Nagar","warn"],
+  [26.8750,75.7600,"💧 Water supply notice · Mansarovar","warn"],
+  [27.0300,75.8300,"📶 Network issue · Kukas","warn"],
+  [26.9250,75.8050,"📅 Government service · Jaipur","good"]
+ ]}
+};
+
+// CivicPulse demo feed engine: each record is normalized to the same schema so
+// heterogeneous civic signals can be fused and compared consistently.
+const civicFeeds={
+ weather:{icon:"🌦️",name:"Weather Feed",area:"Jaipur",value:"31°C · 48% RH",severity:"normal",metric:"temperature",syncOffset:8},
+ traffic:{icon:"🚦",name:"Traffic Feed",area:"Tonk Road",value:"Moderate congestion",severity:"medium",metric:"congestion",syncOffset:5},
+ incidents:{icon:"🚨",name:"Incident Feed",area:"Jaipur",value:"3 active incidents",severity:"high",metric:"active_incidents",syncOffset:4},
+ aqi:{icon:"💨",name:"AQI Feed",area:"Jaipur",value:"118 · Moderate",severity:"medium",metric:"aqi",syncOffset:11}
+};
+
+function normalizedCivicRecords(){
+ const now=Date.now();
+ return [
+  {source:"weather",area:"Tonk Road",metric:"weather_intensity",value:0.72,severity:"medium",timestamp:new Date(now-8*60000).toISOString()},
+  {source:"traffic",area:"Tonk Road",metric:"congestion_index",value:0.78,severity:"medium",timestamp:new Date(now-5*60000).toISOString()},
+  {source:"incidents",area:"Tonk Road",metric:"complaints_30m",value:8,severity:"medium",timestamp:new Date(now-4*60000).toISOString()},
+  {source:"aqi",area:"Jaipur",metric:"aqi",value:118,severity:"medium",timestamp:new Date(now-11*60000).toISOString()}
+ ];
+}
+
+function feedStatusClass(severity){return severity==="high"?"bad":severity==="medium"?"medium":"good"}
+function feedStatusLabel(severity){return severity==="high"?"WATCH":severity==="medium"?"MONITOR":"NORMAL"}
+function relativeMinutes(ts){return Math.max(1,Math.round((Date.now()-ts)/60000));}
+
+function detectCivicCorrelation(records){
+ const sameZone=records.filter(r=>r.area==="Tonk Road");
+ const weather=sameZone.find(r=>r.metric==="weather_intensity");
+ const traffic=sameZone.find(r=>r.metric==="congestion_index");
+ const complaints=sameZone.find(r=>r.metric==="complaints_30m");
+ if(weather && traffic && weather.value>=0.6 && traffic.value>=0.6){
+  return {
+   title:"Possible weather-related traffic slowdown",
+   text:"Weather activity and traffic congestion are elevated in the same Tonk Road zone. This is a possible link, not a confirmed cause.",
+   confidence:"Medium confidence",
+   area:"Tonk Road",
+   window:"30 min window",
+   severity:"Monitor"
+  };
+ }
+ if(complaints && complaints.value>=7){
+  return {
+   title:"Incident reports are above the demo baseline",
+   text:"Complaint activity is elevated in one monitored zone and should be watched for further clustering.",
+   confidence:"Rule triggered",
+   area:"Tonk Road",
+   window:"30 min window",
+   severity:"Monitor"
+  };
+ }
+ return {
+  title:"No strong cross-feed anomaly detected",
+  text:"Current normalized signals do not cross the dashboard's demo thresholds for a notable correlation.",
+  confidence:"Within normal thresholds",
+  area:"Jaipur",
+  window:"30 min window",
+  severity:"Normal"
+ };
+}
+
+function renderDataFusion(){
+ const now=Date.now();
+ const feedItems=Object.values(civicFeeds);
+ $("feedSources").innerHTML=feedItems.map(f=>`<div class="source-card"><div class="source-top"><span class="source-icon">${f.icon}</span><div class="source-name">${f.name}</div><span class="source-status">${feedStatusLabel(f.severity)}</span></div><div class="source-value">${f.value}</div><div class="source-area">Area: ${f.area}</div><div class="source-sync">Demo sync ${Math.max(1,Math.round((now-(now-f.syncOffset*60000))/60000))} min ago · normalized</div></div>`).join("");
+ $("fusionFeedBadge").textContent=feedItems.length+" FEEDS";
+ $("fusionFeedCount").textContent=feedItems.length;
+ $("fusionRecords").textContent=String(feedItems.length*24);
+ $("fusionFreshness").textContent="Healthy";
+ const records=normalizedCivicRecords();
+ const c=detectCivicCorrelation(records);
+ $("correlationTitle").textContent=c.title;
+ $("correlationText").textContent=c.text;
+ const why = c.severity==="Monitor"
+  ? `Travel or local activity may be affected around ${c.area}. The dashboard is flagging this for monitoring based on the current demo signals.`
+  : c.severity==="Normal"
+   ? `No elevated cross-feed pattern currently needs attention. Continue monitoring as new demo signals arrive.`
+   : `The detected pattern may matter to residents in ${c.area}. Treat it as an early signal rather than a confirmed cause.`;
+ $("correlationWhy").textContent=why;
+ $("correlationMeta").innerHTML=`<span>${c.confidence}</span><span>${c.area}</span><span>${c.window}</span><span>Possible link · not confirmed cause</span>`;
+}
+
+let active="safety", markers=[], map, layer=L.layerGroup(), searchMarker=null, lastGeocodeAt=0;
+
+function $(id){return document.getElementById(id)}
+function toast(msg){$("toast").textContent=msg;$("toast").style.opacity=1;clearTimeout(window.tt);window.tt=setTimeout(()=>$("toast").style.opacity=0,2200)}
+
+function showMapError(message){
+ const el=document.getElementById("map");
+ if(!el)return;
+ el.innerHTML=`<div class="map-error"><b>Map could not load</b><span>${message}</span><br><button class="btn primary" style="margin-top:10px" onclick="location.reload()">Retry</button></div>`;
+}
+function initMap(){
+ const finish=()=>{
+  try{
+   map=L.map("map",{zoomControl:false,preferCanvas:true,attributionControl:false}).setView([26.9124,75.7873],12);
+   L.control.zoom({position:"bottomright"}).addTo(map);
+   // Use Esri's World Street Map as the primary basemap.
+   // This avoids the OpenStreetMap standard tile-server blocking shown in the MVP.
+   const tiles=L.tileLayer(
+    "https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}",
+    {
+      maxZoom:19,
+      attribution:"Tiles © Esri — Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom",
+      crossOrigin:true
+    }
+   );
+   let tileErrors=0;
+   tiles.on("tileerror",()=>{
+     tileErrors++;
+     if(tileErrors===1) toast("Map tile server is temporarily unavailable");
+   });
+   tiles.addTo(map);
+   layer.addTo(map);
+   setTimeout(()=>map.invalidateSize(true),100);
+   setTimeout(()=>map.invalidateSize(true),500);
+   const loading=document.getElementById("mapLoading");
+   if(loading)loading.classList.add("hidden");
+   window.addEventListener("resize",()=>map&&map.invalidateSize());
+  }catch(err){
+   console.error(err);showMapError("Leaflet loaded, but map initialization failed.");
+  }
+ };
+ if(window.L) finish();
+ else showMapError("The map library could not be loaded. Check your internet connection and retry.");
+}
+
+function iconFor(type){
+ const color=type==="danger"?"#dc2626":type==="warn"?"#ea8a00":"#16a34a";
+ return L.divIcon({className:"",html:`<div style="width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:${color};border:3px solid #fff;box-shadow:0 2px 8px #0005;display:grid;place-items:center"><span style="width:8px;height:8px;border-radius:50%;background:#fff;display:block"></span></div>`,iconSize:[30,30],iconAnchor:[15,28]})
+}
+function drawMarkers(){
+ layer.clearLayers();
+ markers=categories[active].markers;
+ markers.forEach(m=>{
+  const mk=L.marker([m[0],m[1]],{icon:iconFor(m[3])}).addTo(layer);
+  mk.bindPopup(`<b>${m[2]}</b><br><small>CityPulse operational signal</small>`);
+ });
+ if(searchMarker) searchMarker.addTo(layer);
+}
+
+const indianStateNames=new Set([
+ "andhra pradesh","arunachal pradesh","assam","bihar","chhattisgarh","goa","gujarat","haryana","himachal pradesh","jharkhand","karnataka","kerala","madhya pradesh","maharashtra","manipur","meghalaya","mizoram","nagaland","odisha","punjab","rajasthan","sikkim","tamil nadu","telangana","tripura","uttar pradesh","uttarakhand","west bengal",
+ "andaman and nicobar islands","chandigarh","dadra and nagar haveli and daman and diu","delhi","jammu and kashmir","ladakh","lakshadweep","puducherry"
+]);
+
+// Deterministic centers for state-level searches. These approximate map centers keep
+// a state query from being ranked to an unrelated city by the public geocoder.
+const indianStateCenters={
+ "andhra pradesh":[15.9129,79.7400],"arunachal pradesh":[28.2180,94.7278],"assam":[26.2006,92.9376],
+ "bihar":[25.0961,85.3131],"chhattisgarh":[21.2787,81.8661],"goa":[15.2993,74.1240],
+ "gujarat":[22.2587,71.1924],"haryana":[29.0588,76.0856],"himachal pradesh":[31.1048,77.1734],
+ "jharkhand":[23.6102,85.2799],"karnataka":[15.3173,75.7139],"kerala":[10.8505,76.2711],
+ "madhya pradesh":[22.9734,78.6569],"maharashtra":[19.7515,75.7139],"manipur":[24.6637,93.9063],
+ "meghalaya":[25.4670,91.3662],"mizoram":[23.1645,92.9376],"nagaland":[26.1584,94.5624],
+ "odisha":[20.9517,85.0985],"punjab":[31.1471,75.3412],"rajasthan":[27.0238,74.2179],
+ "sikkim":[27.5330,88.5122],"tamil nadu":[11.1271,78.6569],"telangana":[18.1124,79.0193],
+ "tripura":[23.9408,91.9882],"uttar pradesh":[26.8467,80.9462],"uttarakhand":[30.0668,79.0193],
+ "west bengal":[22.9868,87.8550],
+ "andaman and nicobar islands":[11.7401,92.6586],"chandigarh":[30.7333,76.7794],
+ "dadra and nagar haveli and daman and diu":[20.1809,73.0169],"delhi":[28.7041,77.1025],
+ "jammu and kashmir":[33.7782,76.5762],"ladakh":[34.1526,77.5770],"lakshadweep":[10.5667,72.6417],"puducherry":[11.9416,79.8083]
+};
+const stateDisplayNames={
+ "andhra pradesh":"Andhra Pradesh","arunachal pradesh":"Arunachal Pradesh","assam":"Assam","bihar":"Bihar",
+ "chhattisgarh":"Chhattisgarh","goa":"Goa","gujarat":"Gujarat","haryana":"Haryana","himachal pradesh":"Himachal Pradesh",
+ "jharkhand":"Jharkhand","karnataka":"Karnataka","kerala":"Kerala","madhya pradesh":"Madhya Pradesh",
+ "maharashtra":"Maharashtra","manipur":"Manipur","meghalaya":"Meghalaya","mizoram":"Mizoram","nagaland":"Nagaland",
+ "odisha":"Odisha","punjab":"Punjab","rajasthan":"Rajasthan","sikkim":"Sikkim","tamil nadu":"Tamil Nadu",
+ "telangana":"Telangana","tripura":"Tripura","uttar pradesh":"Uttar Pradesh","uttarakhand":"Uttarakhand",
+ "west bengal":"West Bengal","andaman and nicobar islands":"Andaman and Nicobar Islands","chandigarh":"Chandigarh",
+ "dadra and nagar haveli and daman and diu":"Dadra and Nagar Haveli and Daman and Diu","delhi":"Delhi",
+ "jammu and kashmir":"Jammu and Kashmir","ladakh":"Ladakh","lakshadweep":"Lakshadweep","puducherry":"Puducherry"
+};
+
+function normalizeSearchName(q){
+ return q.toLowerCase().replace(/\b(state|india)\b/g,"").replace(/[,.-]/g," ").replace(/\s+/g," ").trim();
+}
+
+function isIndianStateQuery(q){
+ return indianStateNames.has(normalizeSearchName(q));
+}
+
+function pickBestGeocodeResult(data,query){
+ const wanted=normalizeSearchName(query);
+ const stateQuery=isIndianStateQuery(query);
+ const scored=data.map((item,index)=>{
+  const name=(item.name||item.namedetails?.name||"").toLowerCase().trim();
+  const first=(item.display_name||"").split(",")[0].toLowerCase().trim();
+  const type=(item.type||"").toLowerCase();
+  let score=0;
+  if(name===wanted)score+=100;
+  if(first===wanted)score+=70;
+  if((item.display_name||"").toLowerCase().startsWith(wanted+", "))score+=40;
+  if(stateQuery && ["state","administrative"].includes(type))score+=80;
+  if(stateQuery && (item.address?.state||"").toLowerCase()===wanted)score+=60;
+  score-=index*2;
+  return {item,score};
+ }).sort((a,b)=>b.score-a.score);
+ return scored[0]?.item||data[0];
+}
+
+const stateAreaMap={
+ "uttar pradesh":["Lucknow","Kanpur","Varanasi","Agra","Prayagraj","Noida","Meerut","Gorakhpur"],
+ "bihar":["Patna","Gaya","Bhagalpur","Muzaffarpur","Darbhanga","Purnia","Begusarai"],
+ "rajasthan":["Jaipur","Jodhpur","Udaipur","Kota","Ajmer","Bikaner","Alwar"],
+ "maharashtra":["Mumbai","Pune","Nagpur","Nashik","Thane","Aurangabad","Kolhapur"],
+ "madhya pradesh":["Bhopal","Indore","Gwalior","Jabalpur","Ujjain","Sagar","Rewa"],
+ "gujarat":["Ahmedabad","Surat","Vadodara","Rajkot","Gandhinagar","Bhavnagar","Jamnagar"],
+ "west bengal":["Kolkata","Howrah","Siliguri","Durgapur","Asansol","Darjeeling","Kharagpur"],
+ "karnataka":["Bengaluru","Mysuru","Mangaluru","Hubballi","Belagavi","Kalaburagi","Shivamogga"],
+ "tamil nadu":["Chennai","Coimbatore","Madurai","Salem","Tiruchirappalli","Tiruppur","Vellore"],
+ "kerala":["Thiruvananthapuram","Kochi","Kozhikode","Thrissur","Kollam","Kannur","Alappuzha"],
+ "telangana":["Hyderabad","Warangal","Nizamabad","Karimnagar","Khammam","Nalgonda","Adilabad"],
+ "andhra pradesh":["Vijayawada","Visakhapatnam","Tirupati","Guntur","Nellore","Kurnool","Rajahmundry"],
+ "punjab":["Amritsar","Ludhiana","Jalandhar","Patiala","Bathinda","Mohali","Pathankot"],
+ "haryana":["Gurugram","Faridabad","Panipat","Ambala","Hisar","Karnal","Rohtak"],
+ "jharkhand":["Ranchi","Jamshedpur","Dhanbad","Bokaro","Deoghar","Hazaribagh","Giridih"],
+ "odisha":["Bhubaneswar","Cuttack","Rourkela","Puri","Berhampur","Sambalpur","Balasore"],
+ "assam":["Guwahati","Dibrugarh","Silchar","Jorhat","Tezpur","Nagaon","Tinsukia"]
+};
+const defaultJaipurAreas=["Mansarovar","Malviya Nagar","Vaishali Nagar","C-Scheme","Amer","Sanganer","Jhotwara","Chomu","Kukas"];
+let currentSearchContext={label:"Jaipur",kind:"city"};
+
+function updateMyAreaOptions(label,kind="city"){
+ const select=$("myArea");
+ if(!select)return;
+ const key=normalizeSearchName(label||"");
+ let options;
+ if(kind==="state"){
+   options=stateAreaMap[key]||["Statewide","Central Zone","North Zone","South Zone","East Zone","West Zone"];
+ }else if(key==="jaipur"){
+   options=defaultJaipurAreas;
+ }else{
+   options=[`${label||"City"} Citywide`,`Central Area`,`North Zone`,`South Zone`,`East Zone`,`West Zone`];
+ }
+ select.innerHTML=options.map(name=>`<option value="${name.replace(/&/g,"&amp;").replace(/"/g,"&quot;")}">${name}</option>`).join("");
+ select.value=options[0];
+ updateMyArea();
+}
+
+function updateSearchContext(label,kind="place"){
+ const clean=(label||"").split(",")[0].trim()||"Jaipur";
+ const isState=kind==="state";
+ const region=isState?`${clean}, India`:clean;
+ currentSearchContext={label:clean,kind:isState?"state":"city"};
+ const brand=$("brandLocation"),side=$("sideCityName"),pill=$("locationPill"),pulse=$("cityPulseTitle");
+ if(brand)brand.textContent=isState?`${clean} State Civic Intelligence View`:`${clean} Civic Intelligence Dashboard`;
+ if(side)side.textContent=`${clean} ${isState?"State":"City"} Status`;
+ if(pill){ const clock=$("clock")?.outerHTML||""; pill.innerHTML=`📍 ${region} · ${clock}`; }
+ if(pulse)pulse.textContent=`🏙️ ${clean} ${isState?"State":"City"} Pulse`;
+ updateMyAreaOptions(clean,currentSearchContext.kind);
+}
+
+function getLocalStateResult(query){
+ const key=normalizeSearchName(query);
+ const center=indianStateCenters[key];
+ if(!center)return null;
+ return {lat:center[0],lon:center[1],display_name:`${stateDisplayNames[key]||query}, India`,kind:"state"};
+}
+
+async function searchPlace(query){
+ const now=Date.now();
+ const wait=Math.max(0,1100-(now-lastGeocodeAt));
+ if(wait) await new Promise(r=>setTimeout(r,wait));
+ lastGeocodeAt=Date.now();
+ const normalized=normalizeSearchName(query);
+ const stateQuery=isIndianStateQuery(query);
+
+ // Resolve state names locally first. This guarantees that a query like Bihar
+ // cannot be ranked to Jaipur (or another city) by geocoder results/cache.
+ if(stateQuery){
+  const localState=getLocalStateResult(query);
+  if(localState){
+   try{localStorage.setItem("citypulse_geocode_v3_"+normalized,JSON.stringify(localState));}catch(_){}
+   updateSearchContext(localState.display_name,localState.kind);
+   focusSearchResult(localState.lat,localState.lon,localState.display_name,null,localState.kind);
+   toast("Map moved to "+localState.display_name.split(",")[0]);
+   return;
+  }
+ }
+ // v3 cache prevents older city-biased geocode results from being reused.
+ const cacheKey="citypulse_geocode_v2_"+normalized;
+ try{
+  const cached=JSON.parse(localStorage.getItem(cacheKey)||"null");
+  if(cached && cached.lat && cached.lon){
+   focusSearchResult(cached.lat,cached.lon,cached.display_name||query,cached.bbox,cached.kind||"place");
+   return;
+  }
+ }catch(_){}
+ toast("Searching map for "+query+"…");
+ const params=new URLSearchParams({format:"jsonv2",addressdetails:"1",namedetails:"1",limit:stateQuery?8:6,q:query});
+ if(stateQuery){
+  params.set("featuretype","state");
+  params.set("countrycodes","in");
+ }
+ const url="https://nominatim.openstreetmap.org/search?"+params.toString();
+ const res=await fetch(url,{headers:{"Accept":"application/json"}});
+ if(!res.ok)throw new Error("Geocoder request failed");
+ let data=await res.json();
+ if(!data.length && stateQuery){
+  const fallback=new URLSearchParams({format:"jsonv2",addressdetails:"1",namedetails:"1",limit:"6",q:query,countrycodes:"in"});
+  const fallbackRes=await fetch("https://nominatim.openstreetmap.org/search?"+fallback.toString(),{headers:{"Accept":"application/json"}});
+  if(fallbackRes.ok)data=await fallbackRes.json();
+ }
+ if(!data.length){toast("City/state/place not found: "+query);return;}
+ const hit=pickBestGeocodeResult(data,query);
+ const item={lat:Number(hit.lat),lon:Number(hit.lon),display_name:hit.display_name,bbox:hit.boundingbox,kind:stateQuery?"state":"place"};
+ try{localStorage.setItem(cacheKey,JSON.stringify(item));}catch(_){}
+ focusSearchResult(item.lat,item.lon,item.display_name,item.bbox,item.kind);
+}
+
+function focusSearchResult(lat,lon,label,bbox,kind="place"){
+ if(!map)return;
+ updateSearchContext(label,kind);
+ if(searchMarker)layer.removeLayer(searchMarker);
+ searchMarker=L.marker([lat,lon],{icon:L.divIcon({className:"",html:`<div style="width:34px;height:34px;border-radius:50%;background:#2563eb;border:4px solid #fff;box-shadow:0 3px 12px #0005;display:grid;place-items:center;color:#fff;font-size:15px">⌖</div>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(layer);
+ const placeTitle=label.split(",")[0];
+ const placeType=kind==="state"?"state":"city/place";
+ searchMarker.bindPopup(`<b>📍 ${placeTitle}</b><br><small>${label}</small><br><span style="color:#2563eb;font-weight:700">Blue marker = searched ${placeType}</span>`,{className:"search-result-popup",autoPan:true,autoPanPadding:[30,30],closeButton:true}).openPopup();
+ let view=[lat,lon];
+ if(Array.isArray(bbox)&&bbox.length===4){
+  const south=Number(bbox[0]), north=Number(bbox[1]), west=Number(bbox[2]), east=Number(bbox[3]);
+  if([south,north,west,east].every(Number.isFinite) && Math.abs(north-south)+Math.abs(east-west)>0){
+   map.fitBounds([[south,west],[north,east]],{padding:[40,40],maxZoom:kind==="state"?8:13});
+  }else map.setView(view,kind==="state"?7:13);
+ }else map.setView(view,kind==="state"?7:13);
+ toast("Map moved to "+label.split(",")[0]);
+}
+function render(){
+ const c=categories[active];
+ $("title").textContent=c.title;$("subtitle").textContent=c.subtitle;
+ $("mapTitle").textContent=c.mapTitle;$("mapChip").textContent=c.mapChip;
+ $("subFeatureTitle").textContent=c.title+" Services";
+ $("updated").textContent="Updated just now";
+ $("kpis").innerHTML=c.kpis.map(x=>`<div class="kpi"><small>${x[0]} ${x[1]}</small><b>${x[2]}</b><small>${x[3]}</small></div>`).join("");
+ $("featureGrid").innerHTML=c.features.map(x=>`<div class="feature-card"><h3><span>${x[0]} ${x[1]}</span><span class="badge ${x[4]}">${x[4]==="good"?"NORMAL":x[4]==="medium"?"MONITOR":"ACTIVE"}</span></h3><p>${x[2]}</p><div class="mini-row"><span>Status</span><b>${x[3]}</b></div><div class="mini-row"><span>Action</span><b>View details →</b></div></div>`).join("");
+ $("alerts").innerHTML=c.alerts.map(x=>`<div class="alert"><div class="alert-icon">${x[0]}</div><div><b>${x[1]}</b><small>${x[2]}</small></div><span class="time">${x[3]}</span></div>`).join("");
+ $("alertCount").textContent=c.alerts.length+" active";
+ $("resources").innerHTML=[
+  ["⚡ Power","2 monitored areas"],["📶 Network","1 issue reported"],["💧 Water","3 service notices"],["📅 Holidays","Next: check calendar"]
+ ].map(x=>`<div class="resource"><b>${x[0]} ${x[1]}</b><small>Jaipur city services</small></div>`).join("");
+ const allAlerts=[...categories.safety.alerts,...categories.weather.alerts,...categories.mobility.alerts,...categories.resources.alerts].slice(0,5);
+ $("liveFeed").innerHTML=allAlerts.map(x=>`<div class="feed-item"><div class="feed-icon">${x[0]}</div><div><b>${x[1]}</b><small>${x[2]}</small></div><span class="feed-time">${x[3]}</span></div>`).join("");
+ const insight={
+  safety:["🚨","Safety watch","Emergency services and incident signals are being monitored across Jaipur.","SAFETY"],
+  weather:["🌦️","Environment watch","Weather and air-quality indicators are available for the city right now.","ENVIRONMENT"],
+  mobility:["🚦","Transport watch","Traffic, public transport, parking and road conditions are being monitored.","TRANSPORT & TRAFFIC"],
+  resources:["🏛️","Civic services watch","Power, network, water and government-service notices are being tracked.","LOCAL RESOURCES"]
+ }[active];
+ const currentCorrelation=detectCivicCorrelation(normalizedCivicRecords());
+ const insightWhy=currentCorrelation.severity==="Monitor"
+  ? `Residents may experience changing conditions around ${currentCorrelation.area}; this is a monitoring signal, not a confirmed cause.`
+  : `No notable cross-feed pattern is currently above the demo thresholds.`;
+ $("cityInsight").innerHTML=`<div class="insight-top"><span>${insight[0]}</span><b>${insight[1]}</b></div><p><b>What’s happening:</b> ${insight[2]} <b>Possible link:</b> ${currentCorrelation.title}. <b>Why it matters:</b> ${insightWhy}</p><span class="insight-tag">${insight[3]} · ${currentCorrelation.confidence}</span>`;
+ document.querySelectorAll("[data-cat]").forEach(el=>el.classList.toggle("active",el.dataset.cat===active));
+ drawMarkers();
+ renderDataFusion();
+ setTimeout(()=>{if(map)map.invalidateSize(true)},100);
+}
+function selectCat(cat){active=cat;render();toast(categories[cat].title+" opened")}
+
+const areaPulse={
+ Mansarovar:["🟢","Normal","Water maintenance is being monitored nearby."],
+ "Malviya Nagar":["🟢","Normal","No major local disruption in the current demo signals."],
+ "Vaishali Nagar":["🟠","Monitor","Power restoration activity is being monitored."],
+ "C-Scheme":["🟢","Normal","Traffic is moderate and services are operating."],
+ Amer:["🟢","Normal","Weather signal is stable in the current dashboard."],
+ Sanganer:["🟠","Monitor","Traffic conditions need closer attention."],
+ Jhotwara:["🟢","Normal","No major local disruption is listed."],
+ Chomu:["🟢","Normal","No major local disruption is listed."],
+ Kukas:["🟠","Monitor","Network connectivity is being monitored."]
+};
+function updateMyArea(){
+ const area=$("myArea").value||"";
+ const cityData=areaPulse[area];
+ const isState=currentSearchContext.kind==="state";
+ const d=isState
+   ? (area==="Statewide"||area.endsWith(" Zone")
+      ? ["🟢","Normal",`Statewide ${currentSearchContext.label} civic signals are being monitored in the demo.`]
+      : ((area.toLowerCase().length%5===0)
+         ? ["🟠","Monitor",`Civic activity in ${area}, ${currentSearchContext.label} is being monitored.`]
+         : ["🟢","Normal",`No major disruption is listed for ${area}, ${currentSearchContext.label} in the demo signals.`]))
+   : (cityData||["🟢","Normal","No major local disruption is listed in the current demo signals."]);
+ $("areaResult").innerHTML=`<b>${d[0]} ${area}</b><br><span>Overall status: ${d[1]} · ${d[2]}</span>`;
+}
+$("myArea").addEventListener("change",updateMyArea);
+$("scanArea").onclick=async()=>{
+ const b=$("scanArea"),area=$("myArea").value; b.classList.add("scanning");b.textContent="⏳ Scanning civic signals…";
+ await new Promise(r=>setTimeout(r,900));b.textContent="✓ Area checked";updateMyArea();toast(area+" civic signals checked");
+ setTimeout(()=>{b.classList.remove("scanning");b.textContent="🔎 Check My Area"},1400);
+};
+
+document.querySelectorAll(".nav[data-cat],.cat[data-cat]").forEach(el=>el.addEventListener("click",()=>selectCat(el.dataset.cat)));
+$("zin").onclick=()=>map.zoomIn();$("zout").onclick=()=>map.zoomOut();
+$("fit").onclick=()=>{if(map){map.setView([26.9124,75.7873],12);map.invalidateSize(true)}};
+$("resetMap").onclick=()=>{map.setView([26.9124,75.7873],12);toast("Map reset")};
+$("refreshBtn").onclick=()=>{render();$("updated").textContent="Updated now";toast("Dashboard refreshed")};
+$("notifyBtn").onclick=()=>toast("You have "+categories[active].alerts.length+" active alerts");
+$("locBtn").onclick=()=>{
+ if(!navigator.geolocation)return toast("Location is not supported by this browser");
+ navigator.geolocation.getCurrentPosition(p=>{map.setView([p.coords.latitude,p.coords.longitude],15);toast("Map centered on your location")},()=>toast("Location permission unavailable"));
+};
+
+function openModal(){$("modal").style.display="flex"}
+function closeModal(){$("modal").style.display="none"}
+$("reportBtn").onclick=openModal;$("addIncident").onclick=openModal;$("closeModal").onclick=closeModal;$("cancelModal").onclick=closeModal;
+$("submitIssue").onclick=async()=>{
+ const type=$("issueType").value,area=$("issueArea").value||"Jaipur",desc=$("issueDesc").value||"Civic issue reported";
+ const btn=$("submitIssue");
+ btn.disabled=true;btn.textContent="Submitting…";
+ try{
+  const r=await fetch('/api/reports',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({issue_type:type,area,description:desc})});
+  const data=await r.json();
+  if(!r.ok) throw new Error(data.detail||'Report failed');
+  closeModal();toast("Report #"+data.id+" submitted for "+area);
+  categories.safety.alerts.unshift(["⚠️",type+" reported",area+" · "+desc,"Just now"]);
+  categories.safety.kpis[1][2]=String(Number(categories.safety.kpis[1][2])+1);
+  selectCat("safety");
+ }catch(err){
+  toast("Could not submit report. Is the backend running?");
+  console.error(err);
+ }finally{btn.disabled=false;btn.textContent="Submit report";}
+};
+
+$("search").addEventListener("keydown",async e=>{
+ if(e.key!=="Enter")return;
+ const q=e.target.value.trim();if(!q)return;
+ const lower=q.toLowerCase();
+ if(isIndianStateQuery(q)){
+  try{await searchPlace(q);}
+  catch(err){console.error(err);toast("Could not search this state. Check your internet connection.");}
+  return;
+ }
+ const match=["safety","emergency","incident","ambulance","health"].some(x=>lower.includes(x))?"safety":
+ ["weather","air quality","aqi","temperature"].some(x=>lower.includes(x))?"weather":
+ ["traffic","transport","parking","fuel","road","construction","bus"].some(x=>lower.includes(x))?"mobility":
+ ["power","electricity","network","water","holiday","government"].some(x=>lower.includes(x))?"resources":null;
+ if(match && !/[,.]/.test(q)){
+  selectCat(match);
+  return;
+ }
+ try{await searchPlace(q);}
+ catch(err){console.error(err);toast("Could not search this place. Check your internet connection.");}
+});
+
+
+const API_BASE = (location.protocol === 'file:') ? 'http://127.0.0.1:8000' : '';
+
+const aiData={
+ safety:{
+  keywords:["emergency","alert","incident","ambulance","health","fire","police","accident","danger","rescue","आपात","खतरा","पुलिस","एम्बुलेंस"],
+  answer:()=>`Safety status: <b>${categories.safety.kpis[0][2]} active emergency alerts</b>, <b>${categories.safety.kpis[1][2]} incidents today</b>, <b>${categories.safety.kpis[2][2]} emergency vehicles</b> on route and <b>${categories.safety.kpis[3][2]} health requests</b> pending.`
+ },
+ weather:{
+  keywords:["weather","temperature","aqi","air","pollution","humidity","wind","climate","मौसम","तापमान","हवा","प्रदूषण"],
+  answer:()=>`Weather & environment: <b>31°C</b>, humidity <b>48%</b>, wind <b>14 km/h NW</b>, and AQI <b>118 (Moderate)</b> in this demo dashboard.`
+ },
+ mobility:{
+  keywords:["traffic","transport","bus","parking","fuel","road","construction","mobility","jam","congestion","ट्रैफिक","यातायात","पार्किंग","सड़क"],
+  answer:()=>`Transport & traffic status: public transport is at <b>82% availability</b>, traffic is <b>moderate</b>, parking is around <b>64% available</b>, and <b>18 fuel stations</b> are shown as open in the demo data.`
+ },
+ resources:{
+  keywords:["power","electricity","network","internet","water","holiday","government","resource","outage","supply","बिजली","नेटवर्क","पानी","छुट्टी"],
+  answer:()=>`Local resources: <b>2 power-outage areas</b>, <b>1 network issue</b>, <b>3 water-supply notices</b>, and <b>1 upcoming government holiday</b> are listed in the demo dashboard.`
+ }
+};
+
+// CityPulse AI: a local intent engine. It does not need an API key, but it can
+// understand many natural-language variations and use the dashboard's live demo data.
+const aiAreas=[
+ "walled city","c-scheme","c scheme","amer","kukas","chomu","jamwa ramgarh","sanganer",
+ "malviya nagar","sitapura","bassi","vaishali nagar","mansarovar","jhotwara","bagru",
+ "mi road","tonk road","sodala","civil lines","jawahar nagar","vidhyadhar nagar"
+];
+const aiCityAliases={jaipur:"Jaipur",delhi:"Delhi",mumbai:"Mumbai",patna:"Patna",lucknow:"Lucknow",udaipur:"Udaipur",jodhpur:"Jodhpur",kota:"Kota",ajmer:"Ajmer",agra:"Agra"};
+
+function cleanAiText(q){
+ return q.toLowerCase().replace(/[?!.:,;()\[\]{}]/g," ").replace(/\s+/g," ").trim();
+}
+function aiHas(s,words){return words.some(w=>s.includes(w));}
+function findAiArea(s){return aiAreas.find(a=>s.includes(a));}
+function areaLabel(a){return a ? a.replace(/\bc scheme\b/gi,"C-Scheme").replace(/\b\w/g,m=>m.toUpperCase()) : "";}
+
+function findMarkerByArea(area){
+ if(!area)return null;
+ const all=[...categories.safety.markers,...categories.weather.markers,...categories.mobility.markers,...categories.resources.markers];
+ return all.find(m=>m[2].toLowerCase().includes(area));
+}
+function showAiMapArea(area){
+ const m=findMarkerByArea(area);
+ if(m && map){
+  if(searchMarker)layer.removeLayer(searchMarker);
+  searchMarker=L.marker([m[0],m[1]],{icon:L.divIcon({className:"",html:`<div style="width:34px;height:34px;border-radius:50%;background:#2563eb;border:4px solid #fff;box-shadow:0 3px 12px #0005;display:grid;place-items:center;color:#fff;font-size:15px">⌖</div>`,iconSize:[34,34],iconAnchor:[17,17]})}).addTo(layer);
+  searchMarker.bindPopup(`<b>📍 ${areaLabel(area)}</b><br><small>CityPulse location</small><br><span style="color:#2563eb;font-weight:700">Blue marker = selected location</span>`).openPopup();
+  map.setView([m[0],m[1]],14);
+ }
+}
+
+async function aiReply(q){
+ const s=cleanAiText(q);
+ if(!s)return "Please type a question about Jaipur civic services.";
+
+ // Keep deterministic map actions local so the LLM never controls the map directly.
+ if(aiHas(s,["red marker","red mark","red flag","green marker","green mark","green flag","orange marker","blue marker","blue mark","marker meaning","map legend","flag meaning"])){
+  return `<b>Map marker guide:</b> 🔴 Red = danger/active alert, 🟠 Orange = caution/monitor, 🟢 Green = normal/no danger, 🔵 Blue = searched or selected place.`;
+ }
+ const cityKey=Object.keys(aiCityAliases).find(k=>s===k || s.includes("show "+k) || s.includes("find "+k) || s.includes("map "+k) || s.includes("locate "+k));
+ if(cityKey){
+  try{await searchPlace(aiCityAliases[cityKey]);return `📍 I moved the map to <b>${aiCityAliases[cityKey]}</b>. The blue marker shows the searched place.`;}
+  catch(_){return `I found the city name, but the map search service is unavailable right now.`;}
+ }
+ const area=findAiArea(s);
+ if(area && aiHas(s,["where","show","map","locate","location","near","around","kaha","कहाँ","दिखा"])){
+  showAiMapArea(area);
+  return `📍 I selected <b>${areaLabel(area)}</b> on the map with a blue marker.`;
+ }
+
+ // First try the real LLM. It receives the current dashboard snapshot so answers stay grounded.
+ try{
+  const snapshot={
+   activeCategory:active,
+   categories:Object.fromEntries(Object.entries(categories).map(([k,v])=>[k,{kpis:v.kpis,features:v.features,markers:v.markers}]))
+  };
+  const controller = new AbortController();
+  const timeout = setTimeout(()=>controller.abort(), 12000);
+  const r=await fetch(API_BASE+'/api/ai',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({message:q, dashboard:snapshot}),signal:controller.signal});
+  clearTimeout(timeout);
+  if(r.ok){
+   const data=await r.json();
+   const status = document.querySelector('.ai-status');
+   if(status){
+    status.innerHTML = '<i></i> AI connected · ' + (data.mode === 'openai' ? 'LLM + civic context' : 'local civic engine');
+   }
+   if(data.answer) return data.answer;
+  } else {
+   console.warn('AI API returned', r.status);
+  }
+ }catch(err){
+  console.warn('LLM unavailable; using local fallback.',err);
+ }
+
+ // Local fallback keeps the dashboard useful if the backend/API is offline.
+ if(aiHas(s,["how many","count","kitne","कितने","number"])){
+  if(aiHas(s,["alert","emergency","danger"]))return `There are <b>${categories.safety.kpis[0][2]} active emergency alerts</b> in the current demo data.`;
+  if(aiHas(s,["incident","accident"]))return `There are <b>${categories.safety.kpis[1][2]} incidents today</b> in the current demo data.`;
+  if(aiHas(s,["vehicle","ambulance","rescue"]))return `<b>${categories.safety.kpis[2][2]}</b> emergency vehicles are shown as on route.`;
+  if(aiHas(s,["fuel","petrol","station"]))return `<b>${categories.mobility.kpis[3][2]}</b> fuel stations are shown as open.`;
+  if(aiHas(s,["water"]))return `<b>3 water-supply notices</b> are listed in the dashboard.`;
+ }
+ for(const [cat,data] of Object.entries(aiData)){
+  if(data.keywords.some(k=>s.includes(k))){
+   if(active!==cat)selectCat(cat);
+   return data.answer();
+  }
+ }
+ return `I’m running in local civic mode right now. I can still answer <b>emergency, weather, AQI, traffic, parking, fuel, power, water, reports and city-health</b> questions. For full generative AI, add an OPENAI_API_KEY to the backend environment.`;
+}
+
+function addAiMessage(text,type){
+ const box=$("aiMessages"), div=document.createElement("div");
+ div.className="ai-msg "+type;div.innerHTML=text;box.appendChild(div);box.scrollTop=box.scrollHeight;
+}
+async function sendAi(){
+ const input=$("aiInput"),q=input.value.trim();if(!q)return;
+ addAiMessage(q.replace(/[<>&]/g,m=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[m])),"user");
+ input.value="";
+ const thinking="ai-thinking-"+Date.now();
+ addAiMessage(`<span id="${thinking}">Thinking…</span>`,"bot");
+ try{
+  const answer=await aiReply(q);
+  const node=document.getElementById(thinking);
+  if(node)node.parentElement.innerHTML=answer;
+ }catch(err){
+  console.error(err);
+  const node=document.getElementById(thinking);
+  if(node)node.parentElement.textContent="Sorry, I could not process that request. Try a simpler civic-services question.";
+ }
+ const box=$("aiMessages");box.scrollTop=box.scrollHeight;
+}
+$("aiSend").onclick=sendAi;
+$("aiInput").addEventListener("keydown",e=>{if(e.key==="Enter")sendAi()});
+document.querySelectorAll("[data-ai]").forEach(b=>b.onclick=()=>{$("aiInput").value=b.dataset.ai;sendAi()});
+
+function clock(){
+ $("clock").textContent=new Date().toLocaleTimeString("en-IN",{hour:"2-digit",minute:"2-digit"});
+}
+setInterval(clock,1000);clock();
+async function checkBackend(){
+ try{const r=await fetch(API_BASE+'/api/health');if(r.ok){const data=await r.json();toast("Backend connected · "+data.city);}}catch(e){toast("Demo mode · backend not connected");}
+}
+checkBackend();
+setInterval(()=>{renderDataFusion();},15000);
+initMap();render();updateMyAreaOptions("Jaipur","city");
+</script>
+</body>
+</html>
